@@ -4,8 +4,8 @@
 
 var G = {
     canvas: {
-        width:50,
-        height:50,
+        width:100,
+        height:100,
         element:null
     },
     bmp: {
@@ -18,9 +18,9 @@ var G = {
             if(y < 0){
                 y = G.canvas.height-1;
             }
-           // console.log('\tx = '+x+'\n\ty = '+y);
+           // //console.log('\tx = '+x+'\n\ty = '+y);
             var r = 4*(G.canvas.width * y + x);
-            //console.log('\tx = '+x+'\n\ty = '+y + '\n\t -> '+r);
+            ////console.log('\tx = '+x+'\n\ty = '+y + '\n\t -> '+r);
             var g = r + 1;
             var b = r + 2;
             var a = r + 3;
@@ -103,7 +103,7 @@ var G = {
     },
     error_rate: 0.01,
     max_rules:10,
-    blank_color: {r:255,g:255,b:255,a:255},
+    blank_color: {r:0,g:0,b:0,a:255},
     souranding_blocks: [
         {x: -1,y:-1},
         {x:  0,y:-1},
@@ -115,11 +115,14 @@ var G = {
         {x: -1,y: 0}
     ],
     color_match: function(a,b){
+        ////console.log("a = "+ a.r + ', '+ a.g +', '+ a.b);
+        ////console.log("b = "+ b.r + ', '+ b.g +', '+ b.b);
         m = true;
         m = m && a.r === b.r;
         m = m && a.g === b.g;
         m = m && a.b === b.b;
-        m = m && a.a === b.a;
+        //m = m && a.a === b.a;
+        ////console.log(m);
         return m;
     },
     cells: [],
@@ -136,14 +139,15 @@ var G = {
         if(cell === undefined){
             //do nothing
         } else {
-
-            //console.log('actual cell');
+            //console.log((new Date().getTime())+": found cell.");
+            ////console.log('actual cell');
             blocks = [0,0,0,0,0,0,0,0];
             var e = 0;
             for(var i =0; i < blocks.length;i++){
                 blocks[i] = G.bmp.pixel(x+G.souranding_blocks[i].x,y+G.souranding_blocks[i].y);
-                //console.log('x = '+(x+G.souranding_blocks[i].x)+'\ny = '+(y+G.souranding_blocks[i].y) +
+                ////console.log('x = '+(x+G.souranding_blocks[i].x)+'\ny = '+(y+G.souranding_blocks[i].y) +
                 //'\ncolor = '+ blocks[i]);
+               // //console.log(i + ') matching');
                 if(G.color_match( blocks[i], cell.color)) {
                     blocks[i] = 1;
                 } else if (G.color_match( blocks[i], G.blank_color)) {
@@ -153,6 +157,7 @@ var G = {
                     blocks[i] = 2;
                 }
             }
+            //console.log((new Date().getTime())+": blocks =  "+blocks);
             //give the cell some energy
             cell.energy += e;
             var noAction = true;
@@ -165,48 +170,41 @@ var G = {
                         //do nothing
                         cell.energy -= e;
                     } else if(cell.rules[i].action == G.actions.move){
+                        //console.log((new Date().getTime())+": cell "+cell.id()+" moved.");
                         cell.energy -= 1;
                         var destination_pixel = G.bmp.pixel(x+G.souranding_blocks[cell.rules[i].action].x,y+G.souranding_blocks[cell.rules[i].action].y);
                         if(G.color_match(destination_pixel, G.blank_color)){
-                            G.bmp.pixel(x,y, G.blank_color);
-                            G.bmp.pixel(x+G.souranding_blocks[cell.rules[i].action].x,y+G.souranding_blocks[cell.rules[i].action].y,cell.color);
-                        } else if(G.color_match(destination_pixel, cell.color)){
-                            //G.bmp.pixel(x+G.souranding_blocks[cell.rules[i].action].x,y+G.souranding_blocks[cell.rules[i].action].y,)
+                            G.removeCell(x,y);
+                            G.addCell(x+G.souranding_blocks[cell.rules[i].action].x,y+G.souranding_blocks[cell.rules[i].action].y,cell);
                         } else {
                             cellPlace = (x+G.souranding_blocks[cell.rules[i].action].x)+(G.canvas.width *(y+G.souranding_blocks[cell.rules[i].action].y));
                             otherCell = G.cells[cellPlace];
                             if(otherCell === undefined){
-                                console.log("BOOK KEEPING MISTAKE");
+                                //console.log("BOOK KEEPING MISTAKE");
                             } else {
                                 if(cell.energy > otherCell.energy){
-                                    G.bmp.pixel(x,y, G.blank_color);
-                                    G.bmp.pixel(x+G.souranding_blocks[cell.rules[i].action].x,y+G.souranding_blocks[cell.rules[i].action].y,cell.color);
-                                    G.cells[cellPlace] = cell;
-                                    G.cells[(G.canvas.width * y + x)] = undefined;
-
+                                    G.removeCell(x,y);
+                                    G.addCell(x+G.souranding_blocks[cell.rules[i].action].x,y+G.souranding_blocks[cell.rules[i].action].y,cell);
                                 } else {
-                                    G.bmp.pixel(x,y, G.blank_color);
-                                    G.cells[(G.canvas.width * y + x)] = undefined;
+                                    G.removeCell(x,y);
                                     break;
                                 }
                             }
                         }
                     } else if (cell.rules[i].action == G.actions.copy){
+                        //console.log((new Date().getTime())+": cell "+cell.id()+" copied.");
                         cell.energy -= 2;
                         cellPlace = (x+G.souranding_blocks[cell.rules[i].action].x)+(G.canvas.width *(y+G.souranding_blocks[cell.rules[i].action].y));
                         otherCell = G.cells[cellPlace];
                         if(otherCell === undefined){
                             var newCell = new Cell(cell);
-                            G.bmp.pixel(x+G.souranding_blocks[cell.rules[i].action].x,y+G.souranding_blocks[cell.rules[i].action].y,newCell.color);
-                            G.cells[cellPlace] = newCell;
+                            G.addCell(x+G.souranding_blocks[cell.rules[i].action].x,y+G.souranding_blocks[cell.rules[i].action].y,newCell);
                         } else {
                             if(cell.energy > otherCell.energy){
                                 var newCell = new Cell(cell);
-                                G.bmp.pixel(x+G.souranding_blocks[cell.rules[i].action].x,y+G.souranding_blocks[cell.rules[i].action].y,newCell.color);
-                                G.cells[cellPlace] = newCell;
+                                G.addCell(x+G.souranding_blocks[cell.rules[i].action].x,y+G.souranding_blocks[cell.rules[i].action].y,newCell);
                             } else {
-                                G.bmp.pixel(x,y, G.blank_color);
-                                G.cells[(G.canvas.width * y + x)] = undefined;
+                                G.removeCell(x,y);
                                 break;
                             }
                         }
@@ -214,11 +212,30 @@ var G = {
                 } // end match
             } // end loop
             if(cell.energy < 0 ){
-                G.cells[(G.canvas.width * y + x)] = undefined;
+                //console.log((new Date().getTime())+": cell "+cell.id()+" Died.");
+                G.removeCell(x,y);
             }
         } //end have cell
     }, //end update function
-    cellsPerUpdate: 10
+    cellsPerUpdate: 1000,
+    addCell: function(x,y,cell){
+        G.cells[(G.canvas.width * y + x)] = cell;
+        G.bmp.pixel(x,y,cell.color);
+
+    },
+    removeCell: function(x,y){
+        G.cells[(G.canvas.width * y + x)] = undefined;
+        G.bmp.pixel(x,y, G.blank_color);
+    },
+    generateUUID: function(){
+        var d = new Date().getTime();
+        var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = (d + Math.random()*16)%16 | 0;
+            d = Math.floor(d/16);
+            return (c=='x' ? r : (r&0x7|0x8)).toString(16);
+        });
+        return uuid;
+    }
 };
 var Rule = (function(){
     var _number;
@@ -273,8 +290,10 @@ var Cell = (function(){
     var _color;
     var _rules;
     var _energy;
+    var _id;
     //--------------------------------------------- constructor(s)
     function Cell(mother,father){
+        this._id = G.generateUUID();
         if(mother === undefined && father === undefined){ //new random
             this._color = {
                 r: Math.floor(Math.random()*256),
@@ -326,6 +345,9 @@ var Cell = (function(){
             this._energy = value;
         }
     };
+    Cell.prototype.id = function(){
+        return this._id;
+    };
     return Cell;
 })();
 
@@ -366,8 +388,8 @@ var Arch = (function(){
         }
     };
     Arch.prototype.draw = function(){
-        console.log("debug - " + Math.floor(this._a.min*57.2957795) + ' -> ' + Math.floor(this._a.max*57.2957795) +
-                 '\n       - ' + this._r.min + ' -> '+this._r.max);
+        //console.log("debug - " + Math.floor(this._a.min*57.2957795) + ' -> ' + Math.floor(this._a.max*57.2957795) +
+        //         '\n       - ' + this._r.min + ' -> '+this._r.max);
         var min = this._r.min * Math.cos(this._a.min);
         var max = this._r.min * Math.cos(this._a.max);
         var dir = (max - min)/Math.abs(max-min);
@@ -381,7 +403,7 @@ var Arch = (function(){
             var s = (y-last.y)/(x-last.x);
             if(s === NaN){s=0;}
             var c = s * x - y;
-            console.log("in like flin");
+            //console.log("in like flin");
             for(var xx = last.x; xx <= x; xx++){
                 var  yy = s * xx + c;
                 G.bmp.pixel(this._center.x + xx
@@ -406,11 +428,14 @@ var start = function(){
     G.bmp.imgd = ctx.getImageData(0,0,G.canvas.width,G.canvas.height);
 
 
-    for(var i = 0; i < 0.1 * (G.canvas.width* G.canvas.height);i++){
-        addCell();
+    for(var i = 0; i < 0.01 * (G.canvas.width* G.canvas.height);i++){
+        //addCell(H_cell());
+        addCell(B_cell());
     }
 
     setInterval(function(){
+
+        ////console.log((new Date().getTime())+": ---------- START UPDATE -------- ");
         for(var i = 0; i < G.cellsPerUpdate; i++){
             var x = Math.floor(Math.random()* G.canvas.width);
             var y = Math.floor(Math.random()* G.canvas.height);
@@ -419,9 +444,11 @@ var start = function(){
         G.canvas.element.getContext("2d").putImageData(G.bmp.imgd,0,0);
     },10);
 };
+G.cellsPerUpdate = 0;
 var addCell = function(cell){
     if(cell === undefined){
         cell = new Cell();
+
     }
     var x = Math.floor(Math.random()* G.canvas.width);
     var y = Math.floor(Math.random()* G.canvas.height);
@@ -429,9 +456,9 @@ var addCell = function(cell){
         x = Math.floor(Math.random()* G.canvas.width);
         y = Math.floor(Math.random()* G.canvas.height);
     }
-    G.cells[(G.canvas.width * y + x)] = cell;
+    G.addCell(x,y,cell);
 
-}
+};
 var newArch = function(){
     if (hasStarted  === false) {
         start();
@@ -443,3 +470,120 @@ var newArch = function(){
 };
 var c = {r:0,g:0,b:0,a:255};
 
+var H_cell = function(){
+    var cell = new Cell();
+    cell._color.r = 255;
+    cell._color.g = 0;
+    cell._color.b = 0;
+    cell._rules = [];
+    var r = new Rule();
+    r._number = 0;
+    r._blocks = G.calculateBlocks(r._number);
+    r._action = G.actions.copy;
+    r._direction = 2;
+    cell._rules.push(r);
+    r = new Rule();
+    r._number = 9;
+    r._blocks = G.calculateBlocks(r._number);
+    r._action = G.actions.move;
+    r._direction = 5;
+    cell._rules.push(r);
+
+    return cell
+};
+var A_cell = function(){
+    var cell = new Cell();
+    cell._color.r = 0;
+    cell._color.g = 255;
+    cell._color.b = 0;
+    cell._rules = [];
+
+    var r = new Rule();
+    r._blocks =[0,0,0,0,0,0,0,0];
+    r._number = G.calculateNumber(r._blocks);
+    r._action = G.actions.copy;
+    r._direction = 1;
+    cell._rules.push(r);
+
+    r = new Rule();
+    r._blocks = [0,1,0,0,0,0,0,0];
+    r._number = G.calculateNumber(r._blocks);
+    r._action = G.actions.move;
+    r._direction = 5;
+    cell._rules.push(r);
+
+    r = new Rule();
+    r._blocks = [0,0,1,0,0,0,0,0];
+    r._number = G.calculateNumber(r._blocks);
+    r._action = G.actions.move;
+    r._direction = 5;
+    cell._rules.push(r);
+
+    return cell
+};
+var B_cell = function(){
+    var cell = new Cell();
+    cell._color.r = 0;
+    cell._color.g = 0;
+    cell._color.b = 255;
+    cell._rules = [];
+
+    var r = new Rule();
+    r._blocks =[0,0,0,0,0,0,0,0];
+    r._number = G.calculateNumber(r._blocks);
+    r._action = G.actions.copy;
+    r._direction = 1;
+    cell._rules.push(r);
+
+    r = new Rule();
+    r._blocks = [0,1,0,0,0,0,0,0];
+    r._number = G.calculateNumber(r._blocks);
+    r._action = G.actions.move;
+    r._direction = 5;
+    cell._rules.push(r);
+
+    r = new Rule();
+    r._blocks = [1,0,0,0,0,0,0,0];
+    r._number = G.calculateNumber(r._blocks);
+    r._action = G.actions.move;
+    r._direction = 5;
+    cell._rules.push(r);
+
+    r = new Rule();
+    r._blocks = [0,0,1,0,0,0,0,0];
+    r._number = G.calculateNumber(r._blocks);
+    r._action = G.actions.move;
+    r._direction = 5;
+    cell._rules.push(r);
+
+    r = new Rule();
+    r._blocks = [1,1,0,0,0,0,0,0];
+    r._number = G.calculateNumber(r._blocks);
+    r._action = G.actions.move;
+    r._direction = 5;
+    cell._rules.push(r);
+
+    r = new Rule();
+    r._blocks = [1,0,1,0,0,0,0,0];
+    r._number = G.calculateNumber(r._blocks);
+    r._action = G.actions.move;
+    r._direction = 5;
+    cell._rules.push(r);
+
+    r = new Rule();
+    r._blocks = [0,1,1,0,0,0,0,0];
+    r._number = G.calculateNumber(r._blocks);
+    r._action = G.actions.move;
+    r._direction = 5;
+    cell._rules.push(r);
+
+    r = new Rule();
+    r._blocks = [1,1,1,0,0,0,0,0];
+    r._number = G.calculateNumber(r._blocks);
+    r._action = G.actions.move;
+    r._direction = 5;
+    cell._rules.push(r);
+
+
+    return cell
+};
