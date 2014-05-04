@@ -2,6 +2,161 @@
  * Created by Bill on 4/29/14.
  */
 
+
+
+var S = {
+    debug: true,
+    error_rate: 0.01,
+    updatesPerFrame: 1000,
+    canvas: {
+        width: 100,
+        height: 100
+    },
+    actions: {
+        length: 3,
+        nothing: 0,
+        move: 1,
+        copy: 2
+    },
+    blank_color: {r:0,g:0,b:0,a:255},
+    souranding_blocks: [
+        {x: -1,y:-1},
+        {x:  0,y:-1},
+        {x:  1,y:-1},
+        {x:  1,y: 0},
+        {x:  1,y: 1},
+        {x:  0,y: 1},
+        {x: -1,y: 1},
+        {x: -1,y: 0}
+    ]
+};
+var G = {
+    update: function(x,y){
+        
+    },
+    pixel: function(x,y,c){
+       x = Math.floor(x) % S.canvas.width;
+       if(x < 0){
+           x = S.canvas.width-1;
+       }
+       y = Math.floor(y) % S.canvas.height;
+       if(y < 0){
+           y = S.canvas.height-1;
+       }
+       var r = 4*(S.canvas.width * y + x);
+       var g = r + 1;
+       var b = r + 2;
+       var a = r + 3;
+       var ac = {r: null,g:null,b:null,a:null};
+       if(c === undefined){
+           //hold for a minute
+       } else {
+           G.imgd.data[r] = Math.floor(c.r);
+           G.imgd.data[g] =  Math.floor(c.g);
+           G.imgd.data[b] =  Math.floor(c.b);
+           G.imgd.data[a] =  Math.floor(c.a);
+       }
+       ac.r = G.imgd.data[r];
+       ac.g = G.imgd.data[g];
+       ac.b = G.imgd.data[b];
+       ac.a = G.imgd.data[a];
+       return ac;
+    },
+    addCell: function(x,y,cell){
+        G.cells[(G.canvas.width * y + x)] = cell;
+        G.bmp.pixel(x,y,cell.color);
+    },
+    removeCell: function(x,y){
+        G.cells[(G.canvas.width * y + x)] = undefined;
+        G.bmp.pixel(x,y, G.blank_color);
+    },
+   imgd: null,
+   cells: []
+};
+var M = {
+    random: function(min,max,int){
+        if(max === undefined){
+            max = min;
+            min = 0;
+        }
+        if(int === undefined){
+            int = true;
+        }
+        var range = max - min;
+        if(int){
+            return Math.floor(Math.random()*range+min);
+        }
+        return Math.random()*range+min;
+    },
+    numberToBlocks: function(number,b,l) {
+        var blocks = [];
+        if(l === undefined){
+            l = 8
+        }
+        if(b === undefined){
+            b = 3;
+        }
+        while (number >= b){
+            blocks.push (number % b);
+            number = Math.floor(number/b);
+        }
+        blocks.push(number);
+        while(blocks.length < l){
+            blocks.push(0);
+        }
+        return blocks;
+    },
+    blocksToNumber: function(blocks,b){
+        if(b === undefined){
+            b = 3;
+        }
+        var number = 0;
+        for (var i = 0; i < blocks.length;i++){
+            number += blocks[i] * Math.pow(b,i);
+        }
+        return number;
+    },
+    mutateBlock: function(block,b){
+        if(b === undefined){
+            b = 3;
+        }
+        var Cblock = [];
+        for(var i = 0; i < block.length;i++){
+            if(Math.random() <= G.error_rate){
+                Cblock.push(M.mutateNumber(block[i],b));
+            } else {
+                Cblock.push(block[i]);
+            }
+        }
+        return Cblock;
+    },
+    mutateNumber: function(number,max){
+        return Math.floor(number + M.random(1,max,true)) % max;
+    },
+    color_match: function(a,b){
+        m = true;
+        m = m && a.r === b.r;
+        m = m && a.g === b.g;
+        m = m && a.b === b.b;
+        return m;
+    },
+    generateUUID: function(){
+        var d = new Date().getTime();
+        var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = (d + Math.random()*16)%16 | 0;
+            d = Math.floor(d/16);
+            return (c=='x' ? r : (r&0x7|0x8)).toString(16);
+        });
+        return uuid;
+    }
+};
+var D = {
+    log: function(s){
+        if(S.debug) {
+            console.log((new Date().getDate()) + ": " + s);
+        }
+    }
+};
 var G = {
     canvas: {
         width:100,
